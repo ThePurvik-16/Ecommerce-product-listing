@@ -36,12 +36,6 @@ export default function AddProducts() {
     }
   };
   const MemoImage = memo(({ src }: { src: string }) => {
-    const [loading, setLoading] = useState(true);
-
-    const handleLoad = () => {
-      setLoading(false);
-    };
-
     return (
       <div>
         <img
@@ -50,7 +44,6 @@ export default function AddProducts() {
           src={src}
           alt=""
           className="w-10 h-10 object-cover ml-2"
-          onLoad={handleLoad}
         />
       </div>
     );
