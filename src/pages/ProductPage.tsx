@@ -202,10 +202,11 @@ export default function AddProducts() {
                       <input
                         value={product.discount}
                         onChange={(e) => { }}
-                        className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-20"
+                        placeholder='discount'
+                        className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3"
                       />
                       <select className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-30">
-                        <option>% Off</option>
+                        <option>% OFF</option>
                         <option>Flat</option>
                       </select>
                       <button onClick={() => dispatch(addRemoveProduct({ productId: product.id }))}>
@@ -241,7 +242,7 @@ export default function AddProducts() {
                         <input value="20" className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-20"
                           onChange={(e) => { }} />
                         <select className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-30">
-                          <option>% Off</option>
+                          <option>% OFF</option>
                           <option>Flat</option>
                         </select>
                         <button onClick={() => dispatch(addRemoveProduct({ productId: product.id, variantId: variant.id }))}>
