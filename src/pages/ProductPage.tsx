@@ -13,6 +13,7 @@ export default function AddProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const dispatch: AppDispatch = useDispatch()
 
+
   const [draggedVariantId, setDraggedVariantId] = useState<string | null>(null);
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
@@ -79,6 +80,12 @@ export default function AddProducts() {
         };
       })
       .filter((product: any) => product?.variants?.length > 0);
+  };
+  const [showDiscountInput, setShowDiscountInput] = useState(new Array(selectedProductIds.length).fill(false));
+  const toggleDiscountInput = (index: number) => {
+    const newShowDiscountInput = [...showDiscountInput];
+    newShowDiscountInput[index] = !newShowDiscountInput[index];
+    setShowDiscountInput(newShowDiscountInput);
   };
 
   const toggleVariants = (productId: number) => {
@@ -170,7 +177,7 @@ export default function AddProducts() {
           {selectedProductsList(selectedProductIds, selectedVariantsIds).map((product: any, index) => (
             <>
               <div key={index} className="space-y-2" >
-                <div className="grid grid-cols-[0.85fr_100px_100px_30px] gap-4 items-center">
+                <div className={`grid ${showDiscountInput[index] ? 'grid-cols-[0.85fr_100px_100px_30px]' : 'grid-cols-[0.85fr_200px]'} gap-4 items-center`}>
                   <div className="flex items-center gap-2 relative">
                     <button draggable
                       onDragStart={() => handleDragStartProduct(product.id, index)}
@@ -189,17 +196,30 @@ export default function AddProducts() {
                       </span>
                     </button>
                   </div>
-                  <input
-                    value={product.discount}
-                    onChange={(e) => { }}
-                    className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-20"
-                  />
-                  <select className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-30">
-                    <option>% Off</option>
-                  </select>
-                  <button onClick={() => dispatch(addRemoveProduct({ productId: product.id }))}>
-                    <XIcon className="w-4 h-4 text-gray-400" />
-                  </button>
+
+                  {showDiscountInput[index] ? (
+                    <>
+                      <input
+                        value={product.discount}
+                        onChange={(e) => { }}
+                        className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-20"
+                      />
+                      <select className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-30">
+                        <option>% Off</option>
+                        <option>Flat</option>
+                      </select>
+                      <button onClick={() => dispatch(addRemoveProduct({ productId: product.id }))}>
+                        <XIcon className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => toggleDiscountInput(index)}
+                      className="w-full custom-Bg-green-color text-white rounded-md py-2 px-4"
+                    >
+                      Add Discount
+                    </button>
+                  )}
                 </div>
                 {expandedProducts.includes(product.id) && (
                   <div className="pl-16 pt-5 space-y-2">
@@ -222,6 +242,7 @@ export default function AddProducts() {
                           onChange={(e) => { }} />
                         <select className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-30">
                           <option>% Off</option>
+                          <option>Flat</option>
                         </select>
                         <button onClick={() => dispatch(addRemoveProduct({ productId: product.id, variantId: variant.id }))}>
                           <XIcon className="w-4 h-4 text-gray-400" />
@@ -316,7 +337,7 @@ export default function AddProducts() {
                 <div className="max-h-96 overflow-y-auto" onScroll={handleScroll}>
                   {filteredProducts.map((product: any, index) => (
                     <>
-                      <div className="p-2 md:p-3 space-y-4">
+                      <div key={`${product.id}`} className="p-2 md:p-3 space-y-4">
                         <div className="flex items-center mb-2">
                           <input
                             type="checkbox"
@@ -334,7 +355,7 @@ export default function AddProducts() {
                       <div className='border-b'></div>
                       {product.variants.map((variant: any) => (
                         <>
-                          <div key={variant.id} className="flex items-center border-b justify-between p-4 pl-7">
+                          <div key={`${variant.id}`} className="flex items-center justify-between p-4 pl-7">
                             <div className="flex items-center">
                               <input
                                 type="checkbox"
