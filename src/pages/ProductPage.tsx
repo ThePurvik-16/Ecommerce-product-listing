@@ -11,9 +11,8 @@ export default function AddProducts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [tempSelectedProducts, setTempSelectedProducts] = useState<{ productId: number; variantIds: number[] }[]>([]);
   const dispatch: AppDispatch = useDispatch()
-
-
   const [draggedVariantId, setDraggedVariantId] = useState<string | null>(null);
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
@@ -82,6 +81,7 @@ export default function AddProducts() {
       .filter((product: any) => product?.variants?.length > 0);
   };
   const [showDiscountInput, setShowDiscountInput] = useState(new Array(selectedProductIds.length).fill(false));
+
   const toggleDiscountInput = (index: number) => {
     const newShowDiscountInput = [...showDiscountInput];
     newShowDiscountInput[index] = !newShowDiscountInput[index];
@@ -139,7 +139,52 @@ export default function AddProducts() {
       setDraggedProductIndex(null);
     }
   };
+  const handleCheckboxChange = (productId: number, variantId?: number) => {
+    setTempSelectedProducts((prevSelected) => {
+      const productIndex = prevSelected.findIndex((prod) => prod.productId === productId);
+     
+      if (!variantId) {
+        if (productIndex === -1) {
+          const product = filteredProducts.find((prod:any) => prod.id === productId);
+          const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
+          return [...prevSelected, { productId, variantIds }];
+        } else {
+          return prevSelected.filter((prod) => prod.productId !== productId);
+        }
+      }
+  
 
+      if (productIndex === -1) {
+        return [...prevSelected, { productId, variantIds: [variantId] }];
+      } else {
+        const selectedProduct = prevSelected[productIndex];
+        const isVariantSelected = selectedProduct.variantIds.includes(variantId);
+        const updatedVariants = isVariantSelected
+          ? selectedProduct.variantIds.filter((id) => id !== variantId)
+          : [...selectedProduct.variantIds, variantId];
+  
+        const updatedProduct = { productId, variantIds: updatedVariants };
+        return updatedVariants.length
+          ? prevSelected.map((prod, index) =>
+              index === productIndex ? updatedProduct : prod
+            )
+          : prevSelected.filter((prod) => prod.productId !== productId);
+      }
+    });
+  };
+  const handleAddClick = () => {
+    tempSelectedProducts.forEach((product) => {
+      if (product.variantIds.length > 0) {
+        product.variantIds.forEach((variantId) => {
+          dispatch(addRemoveProduct({ productId: product.productId, variantId }));
+        });
+      } else {
+        dispatch(addRemoveProduct({ productId: product.productId }));
+      }
+    });
+    toggleModal()
+    setTempSelectedProducts([]);
+  };
 
   return (
     <>
@@ -177,7 +222,7 @@ export default function AddProducts() {
           {selectedProductsList(selectedProductIds, selectedVariantsIds).map((product: any, index) => (
             <>
               <div key={index} className="space-y-2" >
-                <div className={`grid ${showDiscountInput[index] ? 'grid-cols-[0.85fr_100px_100px_30px]' : 'grid-cols-[0.85fr_200px]'} gap-4 items-center`}>
+                <div className={`grid ${showDiscountInput[index] ? 'grid-cols-[0.85fr_100px_100px_30px]' : 'grid-cols-[0.85fr_200px_30px]'} gap-4 items-center`}>
                   <div className="flex items-center gap-2 relative">
                     <button draggable
                       onDragStart={() => handleDragStartProduct(product.id, index)}
@@ -209,9 +254,6 @@ export default function AddProducts() {
                         <option>% OFF</option>
                         <option>Flat</option>
                       </select>
-                      <button onClick={() => dispatch(addRemoveProduct({ productId: product.id }))}>
-                        <XIcon className="w-4 h-4 text-gray-400" />
-                      </button>
                     </>
                   ) : (
                     <button
@@ -221,6 +263,10 @@ export default function AddProducts() {
                       Add Discount
                     </button>
                   )}
+                  
+                  <button onClick={() => dispatch(addRemoveProduct({ productId: product.id }))}>
+                        <XIcon className="w-4 h-4 text-gray-400" />
+                      </button>
                 </div>
                 {expandedProducts.includes(product.id) && (
                   <div className="pl-16 pt-5 space-y-2">
@@ -343,8 +389,8 @@ export default function AddProducts() {
                           <input
                             type="checkbox"
                             className="form-checkbox h-5 w-5 text-green-600"
-                            checked={selectedProductIds.includes(product.id)}
-                            onChange={() => dispatch(addRemoveProduct({ productId: product.id }))}
+                            checked={!!tempSelectedProducts.find(prod => prod.productId === product.id)}
+                            onChange={() => handleCheckboxChange(product.id)}
                           />
                           {product.image && product.image.src && (
                             <MemoImage src={product.image.src} />
@@ -361,8 +407,12 @@ export default function AddProducts() {
                               <input
                                 type="checkbox"
                                 className="form-checkbox h-5 w-5 text-green-600"
-                                checked={selectedVariantsIds.includes(variant.id)}
-                                onChange={() => dispatch(addRemoveProduct({ productId: product.id, variantId: variant.id }))}
+                                checked={
+                                  !!tempSelectedProducts
+                                    .find(prod => prod.productId === product.id)?.variantIds
+                                    .includes(variant.id)
+                                }
+                                onChange={() => handleCheckboxChange(product.id,variant.id)}
                               />
                               <span className="ml-2">{variant.title}</span>
                             </div>
@@ -384,7 +434,7 @@ export default function AddProducts() {
                   <button onClick={toggleModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mr-2">
                     Cancel
                   </button>
-                  <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                  <button onClick={handleAddClick} className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                     Add
                   </button>
                 </div>

@@ -27,7 +27,6 @@ const productSlice = createSlice({
   initialState,
   reducers: {
     addRemoveProduct: (state, { payload }: PayloadAction<{ productId: number; variantId?: number; discount?: any }>) => {
-      console.log(payload);
 
       if (payload.productId && !payload.variantId) {
         const exists = state.selectedProducts.findIndex((prod) => prod.parent === payload.productId);
