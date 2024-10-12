@@ -26,57 +26,97 @@ const productSlice = createSlice({
   name: 'products',
   initialState,
   reducers: {
-    addRemoveProduct: (state, { payload }: PayloadAction<{ productId: number; variantId?: number; discount?: any }>) => {
-
-      if (payload.productId && !payload.variantId) {
-        const exists = state.selectedProducts.findIndex((prod) => prod.parent === payload.productId);
-        if (exists === -1) {
-          const product = state.products.find(prod => prod.id === payload.productId);
-          const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
-          state.selectedProducts.push({
-            child: variantIds,
-            parent: payload.productId,
-          });
-        } else {
-          state.selectedProducts = state.selectedProducts.filter(prod => prod.parent !== payload.productId);
-        }
+    addRemoveProduct: (state, { payload }: PayloadAction<{ productId: number; variantId?: number; discount?: any, index?:number }>) => {
+      const { index, productId, variantId } = payload;
+      if(index === 0){
+        state.selectedProducts = []
       }
 
-      // Add/Remove Variant
-      if (payload.productId && payload.variantId) {
-        const existingProductIndex = state.selectedProducts.findIndex((prod) => prod.parent === payload.productId);
-        const { productId, variantId } = payload;
-
-        if (existingProductIndex === -1) {
-          state.selectedProducts.push({ parent: productId, child: [variantId] });
-        } else {
-          const selectedProduct = state.selectedProducts[existingProductIndex];
-          const variants = selectedProduct.child;
-          if (variants.includes(variantId)) {
-            state.selectedProducts[existingProductIndex] = {
-              ...selectedProduct,
-              child: selectedProduct.child.filter(vart => vart !== variantId),
-            };
+      if (index) {
+        if (productId && !variantId) {
+          const exists = state.selectedProducts.findIndex((prod) => prod.parent === productId);
+    
+          if (exists === -1) {
+            const product = state.products.find(prod => prod.id === productId);
+            const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
+            state.selectedProducts.push({
+              child: variantIds,
+              parent: productId,
+            });
           } else {
-            state.selectedProducts[existingProductIndex].child.push(variantId);
+            state.selectedProducts = state.selectedProducts.filter(prod => prod.parent !== productId);
+            const product = state.products.find(prod => prod.id === productId);
+            const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
+            state.selectedProducts.push({
+              child: variantIds,
+              parent: productId,
+            });
           }
+        }
+    
+        if (productId && variantId) {
+          const existingProductIndex = state.selectedProducts.findIndex((prod) => prod.parent === productId);
+    
+          if (existingProductIndex === -1) {
+            state.selectedProducts.push({ parent: productId, child: [variantId] });
+          } else {
+            const selectedProduct = state.selectedProducts[existingProductIndex];
+            const variants = selectedProduct.child;
 
-          if (state.selectedProducts[existingProductIndex].child.length === 0) {
-            state.selectedProducts = state.selectedProducts.filter(prod => prod.parent !== payload.productId);
+            if (!variants.includes(variantId)) {
+              state.selectedProducts[existingProductIndex].child.push(variantId);
+            }
+          }
+        }
+    
+      } else {
+        if (productId && !variantId) {
+          const exists = state.selectedProducts.findIndex((prod) => prod.parent === productId);
+          if (exists === -1) {
+            const product = state.products.find(prod => prod.id === productId);
+            const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
+            state.selectedProducts.push({
+              child: variantIds,
+              parent: productId,
+            });
+          } else {
+            state.selectedProducts = state.selectedProducts.filter(prod => prod.parent !== productId);
+          }
+        }
+
+        if (productId && variantId) {
+          const existingProductIndex = state.selectedProducts.findIndex((prod) => prod.parent === productId);
+          if (existingProductIndex === -1) {
+            state.selectedProducts.push({ parent: productId, child: [variantId] });
+          } else {
+            const selectedProduct = state.selectedProducts[existingProductIndex];
+            const variants = selectedProduct.child;
+
+            if (variants.includes(variantId)) {
+              state.selectedProducts[existingProductIndex] = {
+                ...selectedProduct,
+                child: selectedProduct.child.filter(vart => vart !== variantId),
+              };
+            } else {
+              state.selectedProducts[existingProductIndex].child.push(variantId);
+            }
+
+            if (state.selectedProducts[existingProductIndex].child.length === 0) {
+              state.selectedProducts = state.selectedProducts.filter(prod => prod.parent !== productId);
+            }
           }
         }
       }
     },
     updateProducts: (state, { payload }: PayloadAction<any[]>) => {
       state.products = payload;
-    },    
+    },
     updateProductVariants: (
       state,
       { payload }: PayloadAction<{ productId: number; variants: any[] }>
     ) => {
       const { productId, variants } = payload;
-  
-      // Find the product and update its variants
+
       const productIndex = state.products.findIndex(product => product.id === productId);
       if (productIndex !== -1) {
         state.products[productIndex].variants = variants;
@@ -94,5 +134,5 @@ const productSlice = createSlice({
   },
 });
 
-export const { addRemoveProduct,updateProducts,updateProductVariants } = productSlice.actions;
+export const { addRemoveProduct, updateProducts, updateProductVariants } = productSlice.actions;
 export default productSlice.reducer;

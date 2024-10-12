@@ -9,6 +9,7 @@ export default function AddProducts() {
   const { products, selectedProducts } = useSelector((state: RootState) => state.products)
   const [expandedProducts, setExpandedProducts] = useState<number[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDiscount, setIsDiscount] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [tempSelectedProducts, setTempSelectedProducts] = useState<{ productId: number; variantIds: number[] }[]>([]);
@@ -60,6 +61,10 @@ export default function AddProducts() {
   const toggleModal = () => {
     setIsModalOpen(!isModalOpen);
   };
+
+  const discountHideShow = () => {
+    setIsDiscount(!isDiscount)
+  }
 
   const filteredProducts = Array.from(new Set(products.filter(product =>
     product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,20 +144,20 @@ export default function AddProducts() {
       setDraggedProductIndex(null);
     }
   };
-  const handleCheckboxChange = (productId: number, variantId?: number) => {
+  const handleCheckboxChange = (productId: number, variantId?: number, callAddClick = false) => {
     setTempSelectedProducts((prevSelected) => {
       const productIndex = prevSelected.findIndex((prod) => prod.productId === productId);
-     
+
       if (!variantId) {
         if (productIndex === -1) {
-          const product = filteredProducts.find((prod:any) => prod.id === productId);
+          const product = filteredProducts.find((prod: any) => prod.id === productId);
           const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
           return [...prevSelected, { productId, variantIds }];
         } else {
           return prevSelected.filter((prod) => prod.productId !== productId);
         }
       }
-  
+
 
       if (productIndex === -1) {
         return [...prevSelected, { productId, variantIds: [variantId] }];
@@ -162,28 +167,42 @@ export default function AddProducts() {
         const updatedVariants = isVariantSelected
           ? selectedProduct.variantIds.filter((id) => id !== variantId)
           : [...selectedProduct.variantIds, variantId];
-  
+
         const updatedProduct = { productId, variantIds: updatedVariants };
         return updatedVariants.length
           ? prevSelected.map((prod, index) =>
-              index === productIndex ? updatedProduct : prod
-            )
+            index === productIndex ? updatedProduct : prod
+          )
           : prevSelected.filter((prod) => prod.productId !== productId);
       }
     });
+
+    if (callAddClick) {
+      handleAddClick(productId, variantId, callAddClick);
+    }
   };
-  const handleAddClick = () => {
-    tempSelectedProducts.forEach((product) => {
-      if (product.variantIds.length > 0) {
-        product.variantIds.forEach((variantId) => {
-          dispatch(addRemoveProduct({ productId: product.productId, variantId }));
-        });
+
+
+  const handleAddClick = (product?: any, variant?: any, hideToggle = false) => {
+
+    if (!hideToggle) {
+      tempSelectedProducts.forEach((product, index) => {
+        if (product.variantIds.length > 0) {
+          product.variantIds.forEach((variantId) => {
+            dispatch(addRemoveProduct({ productId: product.productId, variantId: variantId, discount: undefined, index: index }));
+          });
+        } else {
+          dispatch(addRemoveProduct({ productId: product.productId, variantId: undefined, discount: undefined, index: index }));
+        }
+      });
+      toggleModal()
+    } else {
+      if (variant) {
+        dispatch(addRemoveProduct({ productId: product, variantId: variant }));
       } else {
-        dispatch(addRemoveProduct({ productId: product.productId }));
+        dispatch(addRemoveProduct({ productId: product }));
       }
-    });
-    toggleModal()
-    setTempSelectedProducts([]);
+    }
   };
 
   return (
@@ -213,9 +232,26 @@ export default function AddProducts() {
             <div>
               <h2 className="text-lg font-medium text-gray-700 mb-2 pl-8">Discount</h2>
               {selectedProductsList(selectedProductIds, selectedVariantsIds).length === 0 && (
-                <button className="w-full custom-Bg-green-color text-white rounded-md py-2 px-4">
-                  Add Discount
-                </button>
+                <>
+                  {isDiscount ? (
+                    <>
+                      <input
+                        value='20'
+                        onChange={(e) => {}}
+                        placeholder='discount'
+                        className="bg-white custom-input-color border border-gray-300 w-40 me-4 rounded-md py-2 px-3"
+                      />
+                      <select className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-30">
+                        <option>% OFF</option>
+                        <option>Flat</option>
+                      </select>
+                    </>
+                  ) : (
+                    <button onClick={discountHideShow} className="w-full custom-Bg-green-color text-white rounded-md py-2 px-4">
+                      Add Discount
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -263,10 +299,10 @@ export default function AddProducts() {
                       Add Discount
                     </button>
                   )}
-                  
-                  <button onClick={() => dispatch(addRemoveProduct({ productId: product.id }))}>
-                        <XIcon className="w-4 h-4 text-gray-400" />
-                      </button>
+
+                  <button onClick={() => handleCheckboxChange(product.id, undefined, true)}>
+                    <XIcon className="w-4 h-4 text-gray-400" />
+                  </button>
                 </div>
                 {expandedProducts.includes(product.id) && (
                   <div className="pl-16 pt-5 space-y-2">
@@ -291,7 +327,7 @@ export default function AddProducts() {
                           <option>% OFF</option>
                           <option>Flat</option>
                         </select>
-                        <button onClick={() => dispatch(addRemoveProduct({ productId: product.id, variantId: variant.id }))}>
+                        <button onClick={() => handleCheckboxChange(product.id, variant.id, true)}>
                           <XIcon className="w-4 h-4 text-gray-400" />
                         </button>
                       </div>
@@ -412,7 +448,7 @@ export default function AddProducts() {
                                     .find(prod => prod.productId === product.id)?.variantIds
                                     .includes(variant.id)
                                 }
-                                onChange={() => handleCheckboxChange(product.id,variant.id)}
+                                onChange={() => handleCheckboxChange(product.id, variant.id)}
                               />
                               <span className="ml-2">{variant.title}</span>
                             </div>
@@ -434,7 +470,7 @@ export default function AddProducts() {
                   <button onClick={toggleModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mr-2">
                     Cancel
                   </button>
-                  <button onClick={handleAddClick} className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                  <button onClick={() => handleAddClick()} className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                     Add
                   </button>
                 </div>
