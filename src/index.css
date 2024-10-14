@@ -8,7 +8,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-    
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -18,19 +18,53 @@ code {
     monospace;
 }
 
-.custom-Bg-green-color{
+.custom-Bg-green-color {
   background: #008060;
 }
 
-.custom-border-green-color{
+.custom-blue-color {
+  color: #006EFF;
+}
+
+input[type="checkbox"] {
+  accent-color: #008060;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 56px;
+  top: 361px;
+  left: 1042px;
+  gap: 0px;
+  border-radius: 1px 0px 0px 0px;
+  opacity: 0px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6D7175;
+}
+
+
+.custom-border-green-color {
   border-color: #008060;
 }
 
-.custom-green-color{
+.img-size {
+  width: 36px;
+  height: 36px;
+  top: 361px;
+  left: 456px;
+  gap: 0px;
+  border-radius: 4px 0px 0px 0px;
+  opacity: 0px;
+}
+
+
+.custom-green-color {
   color: #008060;
 }
 
-.custom-input-color{
+.custom-input-color {
   box-shadow: 0px 2px 4px 0px #0000001A;
   background: #FFFFFF;
   border: 1px solid #00000012;

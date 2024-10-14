@@ -31,7 +31,7 @@ const productSlice = createSlice({
     addRemoveProduct: (state, { payload }: PayloadAction<{ productId: number; variantId?: number; discount?: any, index?: number }>) => {
       const { index, productId, variantId } = payload;
       if (index === 0) {
-        state.selectedProducts = []
+        // state.selectedProducts = []
       }
 
       if (index) {

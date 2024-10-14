@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { PencilIcon, ChevronDownIcon, ChevronUpIcon, XIcon, GripVertical } from 'lucide-react'
 import { useSelector } from 'react-redux';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { AppDispatch, RootState } from '../store/store';
 import { useDispatch } from 'react-redux';
 import { addRemoveProduct, fetchProducts, updateProducts, updateProductVariants } from '../store/productSlice';
@@ -14,9 +15,6 @@ export default function AddProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [tempSelectedProducts, setTempSelectedProducts] = useState<{ productId: number; variantIds: number[] }[]>([]);
   const dispatch: AppDispatch = useDispatch()
-  const [draggedVariantId, setDraggedVariantId] = useState<string | null>(null);
-  const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
-  const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
   useEffect(() => {
     if (searchTerm || searchTerm === '') {
       setCurrentPage(1);
@@ -55,7 +53,7 @@ export default function AddProducts() {
           decoding='async'
           src={src}
           alt=""
-          className="w-10 h-10 object-cover ml-2"
+          className="img-size ml-2"
         />
       </div>
     );
@@ -105,47 +103,33 @@ export default function AddProducts() {
     )
   }
 
-  const handleDragStart = (productId: string, variantId: string) => {
-    setDraggedVariantId(variantId);
-    setDraggedProductId(productId);
-  };
+  const onDragEnd = (result: any) => {
+    const { source, destination } = result;
 
-  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-  };
+    if (!destination) {
+      return;
+    }
+    if (source.droppableId === 'products' && destination.droppableId === 'products') {
+      const newProducts = Array.from(products);
+      const [removed] = newProducts.splice(source.index, 1);
+      newProducts.splice(destination.index, 0, removed);
+      dispatch(updateProducts(newProducts));
+    }
+    if (source.droppableId.startsWith('variant-') && destination.droppableId.startsWith('variant-')) {
+      const productId = source.droppableId.split('-')[1];
+      const draggedVariantId = source.draggableId;
 
-  const handleDrop = (productId: string, targetVariantId: string) => {
-    if (draggedVariantId && draggedProductId && draggedProductId === productId && draggedVariantId !== targetVariantId) {
-      const draggedProduct = products.find((product: any) => product.id === productId);
-
+      const draggedProduct = products.find((product) => product.id === parseInt(productId));
       if (draggedProduct) {
-        const draggedIndex = draggedProduct.variants.findIndex((v: any) => v.id === draggedVariantId);
-        const targetIndex = draggedProduct.variants.findIndex((v: any) => v.id === targetVariantId);
-
+        const draggedIndex = draggedProduct.variants.findIndex((v) => v.id === draggedVariantId);
+        const targetIndex = destination.index;
+        
         const newVariants = Array.from(draggedProduct.variants);
         const [draggedVariant] = newVariants.splice(draggedIndex, 1);
         newVariants.splice(targetIndex, 0, draggedVariant);
 
         dispatch(updateProductVariants({ productId: draggedProduct.id, variants: newVariants }));
-
-        setDraggedVariantId(null);
-        setDraggedProductId(null);
       }
-    }
-  };
-
-  const handleDragStartProduct = (productId: string, index: number) => {
-    setDraggedProductId(productId);
-    setDraggedProductIndex(index);
-  };
-  const handleDropProduct = (targetIndex: number) => {
-    if (draggedProductId !== null && draggedProductIndex !== null && draggedProductIndex !== targetIndex) {
-      const newProducts = Array.from(products);
-      const [draggedProduct] = newProducts.splice(draggedProductIndex, 1);
-      newProducts.splice(targetIndex, 0, draggedProduct);
-      dispatch(updateProducts(newProducts));
-      setDraggedProductId(null);
-      setDraggedProductIndex(null);
     }
   };
   const handleCheckboxChange = (productId: number, variantId?: number, callAddClick = false) => {
@@ -196,7 +180,7 @@ export default function AddProducts() {
             dispatch(addRemoveProduct({ productId: product.productId, variantId: variantId, discount: undefined, index: index }));
           });
         } else {
-          dispatch(addRemoveProduct({ productId: product.productId, variantId: undefined, discount: undefined, index: index }));
+          dispatch(addRemoveProduct({ productId: product.productId, variantId: undefined, discount: undefined,index: index }));
         }
       });
       toggleModal()
@@ -259,106 +243,127 @@ export default function AddProducts() {
               )}
             </div>
           </div>
-          {selectedProductsList(selectedProductIds, selectedVariantsIds).map((product: any, index) => (
-            <>
-              <div key={index} className="space-y-2" >
-                <div className={`grid ${showDiscountInput[index] ? 'grid-cols-[0.85fr_100px_100px_30px]' : 'grid-cols-[0.85fr_200px_30px]'} gap-4 items-center`}>
-                  <div className="flex items-center gap-2 relative">
-                    <button draggable
-                      onDragStart={() => handleDragStartProduct(product.id, index)}
-                      onDragOver={handleDragOver}
-                      onDrop={() => handleDropProduct(index)}>
-                      <GripVertical className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                    </button>
-                    <span className="text-gray-400">{index + 1}.</span>
-                    <button
-                      className="w-full custom-input-color bg-white border border-gray-300 rounded-md py-2 px-3 text-left focus:outline-none focus:ring-2 focus:custom-border-green-color focus:border-transparent"
-                      onClick={toggleModal}
-                    >
-                      <span className="block truncate">{product.title}</span>
-                      <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                        <PencilIcon className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                      </span>
-                    </button>
-                  </div>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="products">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef}>
+                  {selectedProductsList(selectedProductIds, selectedVariantsIds).map((product: any, index) => (
+                    <Draggable key={product.id} draggableId={`products-${product.id}`} index={index}>
+                      {(provided) => (
+                        <>
+                          <div ref={provided.innerRef} {...provided.draggableProps} className="space-y-2" >
+                            <div className={`grid ${showDiscountInput[index] ? 'grid-cols-[0.85fr_100px_100px_30px]' : 'grid-cols-[0.85fr_200px_30px]'} gap-4 items-center`}>
+                              <div className="flex items-center gap-2 relative">
+                                <button {...provided.dragHandleProps}>
+                                  <GripVertical className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                </button>
+                                <span className="text-gray-400">{index + 1}.</span>
+                                <button
+                                  className="w-full custom-input-color bg-white border border-gray-300 rounded-md py-2 px-3 text-left focus:outline-none focus:ring-2 focus:custom-border-green-color focus:border-transparent"
+                                  onClick={toggleModal}
+                                >
+                                  <span className="block truncate">{product.title}</span>
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                    <PencilIcon className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                  </span>
+                                </button>
+                              </div>
 
-                  {showDiscountInput[index] ? (
-                    <>
-                      <input
-                        value={product.discount}
-                        onChange={(e) => { }}
-                        placeholder='discount'
-                        className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3"
-                      />
-                      <select className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-30">
-                        <option>% OFF</option>
-                        <option>Flat</option>
-                      </select>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => toggleDiscountInput(index)}
-                      className="w-full custom-Bg-green-color text-white rounded-md py-2 px-4"
-                    >
-                      Add Discount
-                    </button>
-                  )}
+                              {showDiscountInput[index] ? (
+                                <>
+                                  <input
+                                    value={product.discount}
+                                    onChange={(e) => { }}
+                                    placeholder='discount'
+                                    className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3"
+                                  />
+                                  <select className="bg-white custom-input-color border border-gray-300 rounded-md py-2 px-3 w-30">
+                                    <option>% OFF</option>
+                                    <option>Flat</option>
+                                  </select>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => toggleDiscountInput(index)}
+                                  className="w-full custom-Bg-green-color text-white rounded-md py-2 px-4"
+                                >
+                                  Add Discount
+                                </button>
+                              )}
 
-                  <button onClick={() => handleCheckboxChange(product.id, undefined, true)}>
-                    <XIcon className="w-4 h-4 text-gray-400" />
-                  </button>
+                              <button onClick={() => handleCheckboxChange(product.id, undefined, true)}>
+                                <XIcon className="w-4 h-4 text-gray-400" />
+                              </button>
+                            </div>
+                            {expandedProducts.includes(product.id) && (
+                              <div className="pl-16 pt-5 space-y-2">
+                                <Droppable droppableId={`variant-${product.id}`}>
+                                  {(provided) => (
+                                    <div ref={provided.innerRef} {...provided.droppableProps}>
+                                      {product.variants.map((variant: any,variantIndex:number) => (
+                                        <Draggable key={variant.id} draggableId={`variant-${variant.id}`} index={variantIndex}>
+                                          {(provided) => (
+                                            <div key={variant.id} {...provided.draggableProps}  className="grid grid-cols-[0.83fr_100px_100px_30px] gap-4 mb-4 items-center">
+                                              <div className='flex items-center'>
+                                                <button ref={provided.innerRef}
+                                                  {...provided.dragHandleProps}>
+                                                  <GripVertical className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                                </button>
+
+                                                <input
+                                                  value={variant.title}
+                                                  onChange={(e) => { }}
+                                                  className="bg-white custom-input-color border border-gray-300 w-full rounded-3xl py-2 px-3"
+                                                />
+                                              </div>
+                                              <input value="20" className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-20"
+                                                onChange={(e) => { }} />
+                                              <select className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-30">
+                                                <option>% OFF</option>
+                                                <option>Flat</option>
+                                              </select>
+                                              <button onClick={() => handleCheckboxChange(product.id, variant.id, true)}>
+                                                <XIcon className="w-4 h-4 text-gray-400" />
+                                              </button>
+                                            </div>
+                                          )}
+                                        </Draggable>
+
+                                      ))}
+                                    </div>
+                                  )}
+                                </Droppable>
+                              </div>
+                            )}
+                            <div className='flex justify-end mr-10'>
+                              <button
+                                onClick={() => toggleVariants(product.id)}
+                                className="custom-blue-color text-sm flex items-end pr-12"
+                              >
+                                {expandedProducts.includes(product.id) ? (
+                                  <>Hide variants <ChevronUpIcon className="w-4 h-4 ml-1" /></>
+                                ) : (
+                                  <>Show variants <ChevronDownIcon className="w-4 h-4 ml-1" /></>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          <div className='py-5'>
+
+                            <div className='border-b'></div>
+                          </div>
+
+                        </>
+                      )}
+                    </Draggable>
+                  ))}
                 </div>
-                {expandedProducts.includes(product.id) && (
-                  <div className="pl-16 pt-5 space-y-2">
-                    {product.variants.map((variant: any) => (
-                      <div key={variant.id} className="grid grid-cols-[0.83fr_100px_100px_30px] gap-4 items-center">
-                        <div className='flex items-center'>
-                          <button draggable onDragStart={() => handleDragStart(product.id, variant.id)}
-                            onDragOver={handleDragOver}
-                            onDrop={() => handleDrop(product.id, variant.id)}>
-                            <GripVertical className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                          </button>
+              )}
+            </Droppable>
+          </DragDropContext>
 
-                          <input
-                            value={variant.title}
-                            onChange={(e) => { }}
-                            className="bg-white custom-input-color border border-gray-300 w-full rounded-3xl py-2 px-3"
-                          />
-                        </div>
-                        <input value="20" className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-20"
-                          onChange={(e) => { }} />
-                        <select className="bg-white custom-input-color border border-gray-300 rounded-3xl py-2 px-3 w-30">
-                          <option>% OFF</option>
-                          <option>Flat</option>
-                        </select>
-                        <button onClick={() => handleCheckboxChange(product.id, variant.id, true)}>
-                          <XIcon className="w-4 h-4 text-gray-400" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className='flex justify-end mr-10'>
-                  <button
-                    onClick={() => toggleVariants(product.id)}
-                    className="text-blue-500 text-sm flex items-end pr-12"
-                  >
-                    {expandedProducts.includes(product.id) ? (
-                      <>Hide variants <ChevronUpIcon className="w-4 h-4 ml-1" /></>
-                    ) : (
-                      <>Show variants <ChevronDownIcon className="w-4 h-4 ml-1" /></>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className='py-5'>
 
-                <div className='border-b'></div>
-              </div>
-            </>
-          ))}
-
-          <div className="flex justify-center">
+          <div className="flex justify-end pr-12">
             <button className="w-full md:w-auto bg-white custom-green-color border custom-border-green-color rounded-md py-2 px-8" onClick={toggleModal}>
               Add Product
             </button>
@@ -474,7 +479,7 @@ export default function AddProducts() {
                   <button onClick={toggleModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mr-2">
                     Cancel
                   </button>
-                  <button onClick={() => handleAddClick()} className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                  <button onClick={() => handleAddClick()} className="px-4 py-2 text-sm font-medium text-white custom-Bg-green-color border border-transparent rounded-md">
                     Add
                   </button>
                 </div>
