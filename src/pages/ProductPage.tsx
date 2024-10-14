@@ -18,18 +18,29 @@ export default function AddProducts() {
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
   useEffect(() => {
+    if (searchTerm || searchTerm === '') {
+      setCurrentPage(1);
+    }
+  }, [searchTerm]);
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        await dispatch(fetchProducts({ limit: 10, page: currentPage })).unwrap();
+        const params: any = {
+          limit: 10,
+          page: currentPage,
+        };
+        if (searchTerm != '') {
+          params.search = searchTerm;
+        }
+        const isSearch = searchTerm !== '';
+        await dispatch(fetchProducts({ params, isSearch })).unwrap();
       } catch (error) {
         console.error(error);
-      } finally {
       }
     };
-
+  
     fetchData();
   }, [dispatch, currentPage]);
-
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const bottom = event.currentTarget.scrollHeight === event.currentTarget.scrollTop + event.currentTarget.clientHeight;
     if (bottom) {
@@ -66,15 +77,8 @@ export default function AddProducts() {
     setIsDiscount(!isDiscount)
   }
 
-  const filteredProducts = Array.from(new Set(products.filter(product =>
-    product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.variants.some((variant: any) => variant.title.toLowerCase().includes(searchTerm.toLowerCase()))
-  ).map(product => product.id)), id => {
-    return products.find(product => product.id === id);
-  });
-
   const selectedProductsList = (mainIds: any, variantIds: any) => {
-    return filteredProducts
+    return products
       .filter(product => mainIds.includes(product?.id))
       .map(product => {
         const filteredVariants = product?.variants.filter(variant => variantIds.includes(variant.id));
@@ -150,7 +154,7 @@ export default function AddProducts() {
 
       if (!variantId) {
         if (productIndex === -1) {
-          const product = filteredProducts.find((prod: any) => prod.id === productId);
+          const product = products.find((prod: any) => prod.id === productId);
           const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
           return [...prevSelected, { productId, variantIds }];
         } else {
@@ -418,7 +422,7 @@ export default function AddProducts() {
                 </div>
                 <div className='border-b'></div>
                 <div className="max-h-96 overflow-y-auto" onScroll={handleScroll}>
-                  {filteredProducts.map((product: any, index) => (
+                  {products.map((product: any, index) => (
                     <>
                       <div key={`${product.id}`} className="p-2 md:p-3 space-y-4">
                         <div className="flex items-center mb-2">

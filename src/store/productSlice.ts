@@ -13,12 +13,14 @@ const initialState: ProductState = {
   selectedProducts: [],
 };
 
-export const fetchProducts = createAsyncThunk<I.SingleProduct[], Record<string, string | number>>(
-  'products/fetchProducts',
-  async (params) => {
+export const fetchProducts = createAsyncThunk<
+  { data: I.SingleProduct[], isSearch: boolean },
+  { params: Record<string, string | number>, isSearch: boolean }
+>('products/fetchProducts',
+  async ({ params, isSearch }) => {
     const url = apiUrl.product_list;
     const response = await apiFetchProducts(url, params);
-    return response;
+    return { data: response, isSearch };
   }
 );
 
@@ -26,16 +28,16 @@ const productSlice = createSlice({
   name: 'products',
   initialState,
   reducers: {
-    addRemoveProduct: (state, { payload }: PayloadAction<{ productId: number; variantId?: number; discount?: any, index?:number }>) => {
+    addRemoveProduct: (state, { payload }: PayloadAction<{ productId: number; variantId?: number; discount?: any, index?: number }>) => {
       const { index, productId, variantId } = payload;
-      if(index === 0){
+      if (index === 0) {
         state.selectedProducts = []
       }
 
       if (index) {
         if (productId && !variantId) {
           const exists = state.selectedProducts.findIndex((prod) => prod.parent === productId);
-    
+
           if (exists === -1) {
             const product = state.products.find(prod => prod.id === productId);
             const variantIds = product?.variants ? product.variants.map(variant => variant.id) : [];
@@ -53,10 +55,10 @@ const productSlice = createSlice({
             });
           }
         }
-    
+
         if (productId && variantId) {
           const existingProductIndex = state.selectedProducts.findIndex((prod) => prod.parent === productId);
-    
+
           if (existingProductIndex === -1) {
             state.selectedProducts.push({ parent: productId, child: [variantId] });
           } else {
@@ -68,7 +70,7 @@ const productSlice = createSlice({
             }
           }
         }
-    
+
       } else {
         if (productId && !variantId) {
           const exists = state.selectedProducts.findIndex((prod) => prod.parent === productId);
@@ -125,8 +127,14 @@ const productSlice = createSlice({
   },
   extraReducers: (builder: any) => {
     builder
-      .addCase(fetchProducts.fulfilled, (state: any, action: PayloadAction<I.SingleProduct[]>) => {
-        state.products = [...state.products, ...action.payload]
+      .addCase(fetchProducts.fulfilled, (state: any, action: PayloadAction<any>, isSearch: boolean) => {
+        const data:any = action
+        const page  = data.meta.arg.params.page
+        if (isSearch || page === 1) {
+          state.products = action.payload.data
+        } else {
+          state.products = [...state.products, ...action.payload.data]
+        }
       })
       .addCase(fetchProducts.rejected, (state: any, action: any) => {
         console.error(action.error.message);
