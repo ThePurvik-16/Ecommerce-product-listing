@@ -172,12 +172,11 @@ export default function AddProducts() {
 
 
   const handleAddClick = (product?: any, variant?: any, hideToggle = false) => {
-
     if (!hideToggle) {
       tempSelectedProducts.forEach((product, index) => {
         if (product.variantIds.length > 0) {
           product.variantIds.forEach((variantId) => {
-            dispatch(addRemoveProduct({ productId: product.productId, variantId: variantId, discount: undefined, index: index }));
+            dispatch(addRemoveProduct({ productId: product.productId, variantId: variantId, discount: undefined, index: index + 1 }));
           });
         } else {
           dispatch(addRemoveProduct({ productId: product.productId, variantId: undefined, discount: undefined,index: index }));
