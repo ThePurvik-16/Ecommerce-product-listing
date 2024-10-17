@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { PencilIcon, ChevronDownIcon, ChevronUpIcon, XIcon, GripVertical } from 'lucide-react'
 import { useSelector } from 'react-redux';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
@@ -12,12 +12,14 @@ export default function AddProducts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDiscount, setIsDiscount] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const searchTermRef = useRef(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
   const [tempSelectedProducts, setTempSelectedProducts] = useState<{ productId: number; variantIds: number[] }[]>([]);
   const dispatch: AppDispatch = useDispatch()
   useEffect(() => {
     if (searchTerm || searchTerm === '') {
       setCurrentPage(1);
+      searchTermRef.current = searchTerm;
     }
   }, [searchTerm]);
   useEffect(() => {
@@ -27,10 +29,10 @@ export default function AddProducts() {
           limit: 10,
           page: currentPage,
         };
-        if (searchTerm !== '') {
-          params.search = searchTerm;
+        if (searchTermRef.current !== '') {
+          params.search = searchTermRef.current;
         }
-        const isSearch = searchTerm !== '';
+        const isSearch = searchTermRef.current !== '';
         await dispatch(fetchProducts({ params, isSearch })).unwrap();
       } catch (error) {
         console.error(error);
