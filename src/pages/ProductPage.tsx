@@ -27,7 +27,7 @@ export default function AddProducts() {
           limit: 10,
           page: currentPage,
         };
-        if (searchTerm != '') {
+        if (searchTerm !== '') {
           params.search = searchTerm;
         }
         const isSearch = searchTerm !== '';
